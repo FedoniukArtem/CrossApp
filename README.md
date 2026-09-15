@@ -16,3 +16,9 @@ dotnet run --project src/Cli
 * **RID:** `win-x64`
 * **Команда:** `dotnet publish src/Cli -c Release -r win-x64 --self-contained true`
 * **Запуск бінарника:** `.\src\Cli\bin\Release\net8.0\win-x64\publish\Cli.exe`
+
+
+## Додаткове завдання 1: Порівняння розмірів Self-Contained публікацій
+* **win-x64:** 70,49 MB
+* **linux-x64:** 70,51 MB
+* **Висновок:** Версія під Linux зазвичай має трохи менший розмір через відсутність деяких специфічних для Windows системних бібліотек.
