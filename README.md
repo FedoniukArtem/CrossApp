@@ -11,3 +11,8 @@
 ```bash
 dotnet build
 dotnet run --project src/Cli
+
+## Self-Contained Публікація
+* **RID:** `win-x64`
+* **Команда:** `dotnet publish src/Cli -c Release -r win-x64 --self-contained true`
+* **Запуск бінарника:** `.\src\Cli\bin\Release\net8.0\win-x64\publish\Cli.exe`
