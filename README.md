@@ -18,7 +18,47 @@ dotnet run --project src/Cli
 * **Запуск бінарника:** `.\src\Cli\bin\Release\net8.0\win-x64\publish\Cli.exe`
 
 
-## Додаткове завдання 1: Порівняння розмірів Self-Contained публікацій
-* **win-x64:** 70,49 MB
-* **linux-x64:** 70,51 MB
-* **Висновок:** Версія під Linux зазвичай має трохи менший розмір через відсутність деяких специфічних для Windows системних бібліотек.
+## Структура
+
+```text
+CrossApp/
+├── CrossApp.sln
+├── README.md
+├── .gitignore
+└── src/
+    ├── Core/
+    │   ├── Core.csproj          (Multi-targeting: net8.0;net10.0)
+    │   └── EnvironmentInfo.cs   (DTO EnvironmentReport + збір даних)
+    └── Cli/
+        ├── Cli.csproj           (ProjectReference на Core)
+        └── Program.cs           (Лише форматування та вивід)
+
+
+# Збірка бібліотеки Core (під всі TFM)
+dotnet build src/Core/Core.csproj
+
+# Запуск консольного застосунку
+dotnet run --project src/Cli/Cli.csproj
+
+
+
+
+
+# 1. Self-Contained (Автономна)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -f net8.0 -o publish/win-x64-sc
+
+# 2. Framework-Dependent (Залежна від .NET Runtime)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained false -f net8.0 -o publish/win-x64-fd
+
+# 3. Single-File (Збірка в один файл)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -f net8.0 -p:PublishSingleFile=true -o publish/win-x64-singlefile
+
+# 4. Single-File + Trimming (Один файл + очищення коду)
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -f net8.0 -p:PublishSingleFile=true -p:PublishTrimmed=true -o publish/win-x64-trimmed
+
+
+Режим публікації,RID,Розмір (МБ),Кількість файлів,Потрібен runtime?
+Self-Contained,win-x64,~70.67 МБ,70.52+,Ні
+Framework-Dependent,win-x64,~0.17 МБ,0,18,Так (.NET 8/10)
+Single-File,win-x64,~64.41 МБ,64,4,Ні
+Single-File + Trimmed,win-x64,11,77 МБ,12,Ні
