@@ -5,6 +5,8 @@ using Core.Dto;
 using Core.Import;
 using Core.Services;
 using Core.Storage;
+using Core.Events;
+using Notifications;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -113,7 +115,11 @@ DemonstrateDomain();
 DemonstrateDomainImport();
 DemonstrateLoanLimit();
 DemonstrateOrder();
-DemonstrateLab5(args);
+//DemonstrateLab5(args);
+
+
+
+DemonstrateLab6();
 
 return 0;
 
@@ -298,4 +304,151 @@ static void TryDo(string title, Action action)
     {
         Console.WriteLine($"{title}: {ex.GetType().Name} — {ex.Message}");
     }
+}
+
+
+static void DemonstrateLab6()
+{
+    Console.WriteLine();
+    Console.WriteLine("=== Лабораторна робота №6: Домeнні події ===");
+
+    string logPath = Path.Combine(
+        AppContext.BaseDirectory,
+        "logs",
+        "app.log");
+
+    Directory.CreateDirectory(
+        Path.GetDirectoryName(logPath)!);
+
+    var store = new InMemoryBookStore();
+    var service = new LendingService(store);
+
+    // Перший підписник: консоль і файл
+    void OnCatalogChanged(
+        object? sender,
+        CatalogChangedEventArgs e)
+    {
+        string message = e.Kind switch
+        {
+            CatalogChangeKind.BookAdded =>
+                $"{e.At:HH:mm:ss} Додано книгу: {e.Title}, ID: {e.CopyId}",
+
+            CatalogChangeKind.CopyIssued =>
+                $"{e.At:HH:mm:ss} Видано примірник {e.CopyId} читачу {e.ReaderId} до {e.DueDate}",
+
+            CatalogChangeKind.CopyReturned =>
+                $"{e.At:HH:mm:ss} Повернуто примірник {e.CopyId} від читача {e.ReaderId}",
+
+            _ => "Невідома подія"
+        };
+
+        Console.WriteLine(message);
+
+        File.AppendAllText(
+            logPath,
+            message + Environment.NewLine);
+    }
+
+    service.Changed += OnCatalogChanged;
+
+    // Другий підписник: лічильник подій
+    int changes = 0;
+
+    service.Changed += (_, _) => changes++;
+
+    // Додаємо книгу
+    var book = service.AddBook(
+        "LAB6-001",
+        "978-617-000-0001",
+        "Кобзар");
+
+    // Видаємо книгу
+    service.IssueBook(
+        book.Id,
+        "READER-001",
+        DateOnly.FromDateTime(DateTime.Today.AddDays(14)));
+
+    // Повертаємо книгу
+    service.ReturnBook(
+        book.Id,
+        "READER-001");
+
+    Console.WriteLine();
+    Console.WriteLine($"Подій отримано: {changes}");
+
+    // Відписуємо першого підписника
+    service.Changed -= OnCatalogChanged;
+
+    Console.WriteLine();
+    Console.WriteLine("=== Перевірка відписки ===");
+
+    // Операція відбудеться, але перший підписник вже не спрацює
+    service.AddBook(
+        "LAB6-002",
+        "978-617-000-0002",
+        "Лісова пісня");
+
+    Console.WriteLine($"Подій отримано після відписки: {changes}");
+
+    // Перевірка помилкової операції
+    Console.WriteLine();
+    Console.WriteLine("=== Перевірка помилки ===");
+
+    try
+    {
+        service.IssueBook(
+            "NON-EXISTENT",
+            "READER-001",
+            DateOnly.FromDateTime(DateTime.Today.AddDays(14)));
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Помилка: {ex.Message}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("=== Пошук через Func ===");
+
+    var availableBooks = service.FindAll(b => !b.IsIssued);
+
+    foreach (var item in availableBooks)
+    {
+        Console.WriteLine(item);
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"Файл журналу: {logPath}");
+
+
+    Console.WriteLine();
+    Console.WriteLine("=== Додаткове завдання: NotificationSink ===");
+
+    var sinkService = new LendingService(
+        new InMemoryBookStore(),
+        [
+            new ConsoleSink(),
+            new FileSink(logPath)
+        ]);
+
+    sinkService.AddBook(
+        "SINK-001",
+        "978-617-000-0003",
+        "Тіні забутих предків");
+
+
+
+    Console.WriteLine();
+Console.WriteLine("=== Додаткове завдання: Action ===");
+
+string csvPath = Path.Combine("data", "sample.csv");
+
+if (File.Exists(csvPath))
+{
+    var importResult = BookCsvImporter.Load(
+        csvPath,
+        message => Console.WriteLine($"Пропущено: {message}"));
+
+    Console.WriteLine(
+        $"Успішно імпортовано: {importResult.Items.Count}");
+}
 }
