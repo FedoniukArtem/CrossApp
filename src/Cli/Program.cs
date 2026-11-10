@@ -17,6 +17,13 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 // Шукаємо перший аргумент, який НЕ є прапорцем (тобто не починається з '--')
 string? customFilePath = args.FirstOrDefault(a => !a.StartsWith("--"));
 
+if (customFilePath is not null &&
+    customFilePath.StartsWith("report-", StringComparison.Ordinal) &&
+    !Path.HasExtension(customFilePath))
+{
+    return ReportCommands.Run(customFilePath, args);
+}
+
 string path = !string.IsNullOrEmpty(customFilePath)
     ? customFilePath
     : Path.Combine("data", "sample.csv");
@@ -409,7 +416,7 @@ static void DemonstrateLab6()
     Console.WriteLine();
     Console.WriteLine("=== Пошук через Func ===");
 
-    var availableBooks = service.FindAll(b => !b.IsIssued);
+    var availableBooks = service.FindAll(b => b.Title == "Кобзар");
 
     foreach (var item in availableBooks)
     {
