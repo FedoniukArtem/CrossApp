@@ -13,7 +13,7 @@ public sealed class LibraryService
 
         if (reader.OpenLoansCount >= 5)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Читач {reader.Id} вже має " +
                 $"{reader.OpenLoansCount} відкритих видач. " +
                 "Максимум — 5");
@@ -44,20 +44,20 @@ public sealed class LibraryService
 
         if (loan.IsClosed)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Видачу {loan.Id} вже закрито");
         }
 
         if (loan.BookCopyId != copy.Id ||
             loan.ReaderId != reader.Id)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 "Примірник або читач не відповідає цій видачі");
         }
 
         if (!copy.IsIssued)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Примірник {copy.Id} не виданий");
         }
 

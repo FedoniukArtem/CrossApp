@@ -1,3 +1,60 @@
+## Лабораторна робота №8
+
+Робочий каталог цієї версії — `CrossApp`. Команди нижче виконуйте з нього.
+
+```powershell
+dotnet run --project src/Cli -- import
+dotnet run --project src/Cli -- import-stream
+dotnet run --project src/Cli -- import data/library-invalid.json
+dotnet run --project src/Cli -- import --timeout-ms 0
+dotnet test
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### Асинхронний імпорт
+
+`IBookImporter` визначає методи `LoadAsync` та `StreamAsync`. `JsonBookImporter` відкриває `FileStream` з `useAsync: true` і читає JSON-масив через `DeserializeAsyncEnumerable`. Кожен DTO перетворюється на `BookCopy` з перевіркою інваріантів. `LoadAsync` накопичує перевірені записи перед передаванням у сервіс, тому помилка даних під час читання залишає сховище без нових записів.
+
+`LendingService.ImportAsync` приймає імпортер через параметр і додає перевірені примірники. `ImportStreamAsync` обробляє `IAsyncEnumerable<BookCopy>` через `await foreach`, зберігаючи записи по одному. Подія `Changed` піднімається один раз після кожного успішного додавання. ID порівнюються правилами сховища. Повторний імпорт пропускає наявні ID та зберігає їхній попередній стан.
+
+За замовчуванням імпорт використовує порожнє сховище в пам’яті та файл `data/library-import.json` із 18 примірниками. Прапорець `--file` вибирає файлове сховище з попередніх робіт, яке зберігає дані між запусками.
+
+```powershell
+dotnet run --project src/Cli -- import data/library-import.json --file
+dotnet run --project src/Cli -- import data/library-import.json --file
+```
+
+Другий запуск додає 0 записів, якщо перший уже додав усі ID. Файл сховища розташований у `src/Cli/bin/Debug/net8.0/data/library.json` для звичайного запуску Debug.
+
+### Скасування та помилки
+
+`CancellationToken` передається з Cli через сервіс до імпортера, файлового читання та JSON-десеріалізації. У циклах перевіряється `ThrowIfCancellationRequested`. Ctrl+C надсилає сигнал через користувацький токен, а `--timeout-ms N` задає таймаут у мілісекундах. `CreateLinkedTokenSource` об’єднує обидва джерела.
+
+`--timeout-ms 0` відтворювано демонструє повідомлення «Імпорт скасовано.» та причину «таймаут». Для Ctrl+C запускайте потоковий імпорт великого JSON-файлу й натисніть Ctrl+C під час обробки. Невеликий приклад із 18 записами може завершитися раніше.
+
+Щоб створити великий файл для демонстрації, виконайте в PowerShell наведені команди.
+
+```powershell
+$items = 1..100000 | ForEach-Object {
+    @{ Id = "LARGE-$_"; Isbn = "ISBN-$_"; Title = "Книга $_" }
+}
+$items | ConvertTo-Json -Depth 3 | Set-Content data/library-large.json -Encoding utf8
+dotnet run --project src/Cli -- import-stream data/library-large.json --timeout-ms 20
+```
+
+Під час скасування або помилки потокового імпорту вже збережені записи залишаються у сховищі. Cli показує їхню кількість за поточний запуск. Для продовження повторіть імпорт із `--file`, використовуючи те саме файлове сховище. У режимі в пам’яті кожен новий запуск створює нове сховище. Коди завершення дорівнюють 0 для успіху, 1 для помилки та 2 для скасування.
+
+`DomainException` описує бізнес-помилки, наприклад повторну видачу примірника. Він успадковує `InvalidOperationException`, зберігаючи сумісність із наявними обробниками. Некоректні аргументи фабрик залишаються `ArgumentException`. Під час імпорту такі помилки даних обгортаються в `DomainException` із номером запису та `InnerException`. Технічні `JsonException`, `IOException` і помилки доступу обробляються окремо в Cli.
+
+### Додаткові завдання
+
+1. Потокове читання реалізовано в `StreamAsync` через `IAsyncEnumerable<BookCopy>`, `await foreach` та `[EnumeratorCancellation]`.
+2. Зв’язані токени користувача й таймауту створюються в Cli. Тест `Import_WithLinkedTokens_IsCancelledByTimeoutOnly` очікує початку операції, запускає таймаут і перевіряє, що користувацький токен лишився активним.
+3. `IProgress<int>` передає відсотки в Cli. Звичайний імпорт показує частку опрацьованих примірників на етапі збереження. Потоковий оцінює прочитані байти, тому буферизація може давати великі стрибки. 100% повідомляється після завершення.
+4. Покриття збирається командою `dotnet test --collect:"XPlat Code Coverage"`. Звіт `coverage.cobertura.xml` з’являється у підкаталозі `TestResults`. Відсоток і межі покриття наведені у звіті Word №8.
+
+Тести використовують власні фіксовані дані та нове сховище в пам’яті для кожного сценарію. Перевірки JSON працюють із тимчасовим файлом, який видаляється в `finally`. Проєкт тестів посилається лише на Core. Звіти №7 можна запускати їхніми підкомандами, наприклад `report-top`.
+
 Ось повний, готовий **README.md** одним блоком — просто скопіюй його та заміни вміст у своєму файлі.
 
 ```markdown

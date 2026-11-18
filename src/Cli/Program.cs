@@ -17,6 +17,11 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 // Шукаємо перший аргумент, який НЕ є прапорцем (тобто не починається з '--')
 string? customFilePath = args.FirstOrDefault(a => !a.StartsWith("--"));
 
+if (customFilePath is "import" or "import-stream")
+{
+    return await ImportCommands.RunAsync(args);
+}
+
 if (customFilePath is not null &&
     customFilePath.StartsWith("report-", StringComparison.Ordinal) &&
     !Path.HasExtension(customFilePath))

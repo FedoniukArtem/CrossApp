@@ -19,7 +19,7 @@ public sealed class InMemoryBookStore(IEnumerable<BookCopy>? seed = null) : IBoo
     {
         ArgumentNullException.ThrowIfNull(item);
         if (_items.ContainsKey(item.Id))
-            throw new InvalidOperationException($"Запис з id={item.Id} вже існує.");
+            throw new DomainException($"Запис з id={item.Id} вже існує.");
 
         _items.Add(item.Id, item);
     }

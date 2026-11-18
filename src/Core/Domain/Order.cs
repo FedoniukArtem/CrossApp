@@ -56,7 +56,7 @@ public sealed class Order
     {
         if (Status != OrderStatus.Draft)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 "Додавати товари можна лише до чернетки");
         }
 
@@ -106,18 +106,18 @@ public sealed class Order
                 => OrderStatus.Confirmed,
 
             OrderStatus.Draft
-                => throw new InvalidOperationException(
+                => throw new DomainException(
                     "Не можна підтвердити порожнє замовлення"),
 
             OrderStatus.Confirmed
-                => throw new InvalidOperationException(
+                => throw new DomainException(
                     "Замовлення вже підтверджене"),
 
             OrderStatus.Cancelled
-                => throw new InvalidOperationException(
+                => throw new DomainException(
                     "Скасоване замовлення не можна підтвердити"),
 
-            _ => throw new InvalidOperationException(
+            _ => throw new DomainException(
                 "Невідомий стан замовлення")
         };
 
@@ -135,10 +135,10 @@ public sealed class Order
                 => OrderStatus.Cancelled,
 
             OrderStatus.Cancelled
-                => throw new InvalidOperationException(
+                => throw new DomainException(
                     "Замовлення вже скасоване"),
 
-            _ => throw new InvalidOperationException(
+            _ => throw new DomainException(
                 "Невідомий стан замовлення")
         };
 

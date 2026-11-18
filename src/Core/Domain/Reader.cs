@@ -61,7 +61,7 @@ public sealed class Reader
     {
         if (OpenLoansCount <= 0)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"У читача {Id} немає відкритих видач");
         }
 

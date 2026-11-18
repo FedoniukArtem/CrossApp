@@ -62,7 +62,7 @@ public sealed class FileBookStore(string path) : IBookStore
         ArgumentNullException.ThrowIfNull(item);
         EnsureLoaded();
         if (_cache.ContainsKey(item.Id))
-            throw new InvalidOperationException($"Запис з id={item.Id} вже існує.");
+            throw new DomainException($"Запис з id={item.Id} вже існує.");
 
         _cache.Add(item.Id, item);
         Flush();

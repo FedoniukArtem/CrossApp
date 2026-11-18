@@ -76,7 +76,7 @@ public sealed class Loan
     {
         if (IsClosed)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Видачу {Id} вже закрито");
         }
 

@@ -61,7 +61,7 @@ public sealed class BookCopy
     {
         if (IsIssued)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Примірник {Id} вже виданий");
         }
 
@@ -72,7 +72,7 @@ public sealed class BookCopy
     {
         if (!IsIssued)
         {
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"Примірник {Id} не виданий, тому його не можна повернути");
         }
 

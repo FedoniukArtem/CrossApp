@@ -57,7 +57,7 @@ public sealed class LendingService
         DateOnly dueDate)
     {
         var book = _store.GetById(id)
-            ?? throw new InvalidOperationException(
+            ?? throw new DomainException(
                 $"Книгу з id={id} не знайдено.");
 
         book.Issue();
@@ -82,7 +82,7 @@ public sealed class LendingService
     public void ReturnBook(string id, string readerId)
     {
         var book = _store.GetById(id)
-            ?? throw new InvalidOperationException(
+            ?? throw new DomainException(
                 $"Книгу з id={id} не знайдено.");
 
         book.Return();
@@ -103,6 +103,66 @@ public sealed class LendingService
     public IReadOnlyList<BookCopy> All() => _store.List();
 
     public BookCopy? Find(string id) => _store.GetById(id);
+
+    public async Task<int> ImportAsync(
+        IBookImporter importer, string path, CancellationToken ct = default, IProgress<int>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(importer);
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(0);
+        var books = await importer.LoadAsync(path, ct);
+        int added = 0;
+        int processed = 0;
+
+        foreach (var book in books)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (AddImportedBook(book))
+            {
+                added++;
+            }
+
+            processed++;
+            ct.ThrowIfCancellationRequested();
+            progress?.Report((int)(processed * 100L / books.Count));
+        }
+
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(100);
+        return added;
+    }
+
+    public async Task<int> ImportStreamAsync(
+        IBookImporter importer, string path, CancellationToken ct = default, IProgress<int>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(importer);
+        ct.ThrowIfCancellationRequested();
+        int added = 0;
+
+        await foreach (var book in importer.StreamAsync(path, ct, progress).WithCancellation(ct))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (AddImportedBook(book))
+            {
+                added++;
+            }
+        }
+
+        ct.ThrowIfCancellationRequested();
+        return added;
+    }
+
+    private bool AddImportedBook(BookCopy book)
+    {
+        if (_store.GetById(book.Id) is not null)
+        {
+            return false;
+        }
+
+        _store.Add(book);
+        OnChanged(CatalogChangeKind.BookAdded, book);
+        return true;
+    }
 
     public IReadOnlyList<BookCopy> FindAll(
         Func<BookCopy, bool> predicate)
