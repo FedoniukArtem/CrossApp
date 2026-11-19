@@ -1,3 +1,102 @@
+# Лабораторна робота 9
+
+Команди виконуйте з каталогу CrossApp.
+
+```powershell
+dotnet run --project src/Cli -- config
+dotnet run --project src/Cli -- export
+dotnet run --project src/Cli -- import-json
+dotnet test
+```
+
+Команда config показує активні параметри та факт наявності ApiKey. export зберігає всю поточну колекцію. Якщо файл ще відсутній, бере 18 демонстраційних примірників восьми видань. import-json [файл] перевіряє та замінює всю колекцію у налаштованому сховищі. Без аргументу вона читає налаштований файл. Команди import та import-stream із №8 продовжують працювати та розуміють новий формат.
+
+## Профілі та ключі
+
+| Ключ | Development | Production |
+| --- | --- | --- |
+| EnvironmentName | Development | Production |
+| Storage:DataPath | data | data/production |
+| Storage:FileName | library.json | library.json |
+| Logging:MinimumLevel | Debug | Warning |
+| Library:LoanDays | 14 | 14 |
+| Integration:ApiKey | user-secrets або env | env |
+
+Library:LoanDays використовується сервісом для видачі з типовим строком повернення. Рівні Debug і Trace показують додаткові діагностичні повідомлення в Cli. У Core пакети Microsoft.Extensions.Configuration не підключаються.
+
+Відносний Storage:DataPath рахується від AppContext.BaseDirectory. Файл appsettings.json і профілі копіюються до каталогів збірки та публікації. Запуск з кореня solution, src/Cli або іншої папки дає той самий файл для тієї самої збірки.
+
+Порядок пріоритету задається так — appsettings.json, профіль, user-secrets у Development, змінні CROSSAPP_, аргументи конфігурації. Проста CROSSAPP_DATA_PATH перевизначає Storage:DataPath останньою, включно з аргументом командного рядка. Профіль обирається через CROSSAPP_ENVIRONMENT або EnvironmentName.
+
+## Приклади для PowerShell
+
+```powershell
+
+зміна профілю:
+$env:CROSSAPP_ENVIRONMENT = "Production"
+dotnet run --project src/Cli -- config
+Remove-Item Env:CROSSAPP_ENVIRONMENT
+
+
+зміна папки:
+$env:CROSSAPP_Storage__DataPath = "demo-data"
+dotnet run --project src/Cli -- config
+Remove-Item Env:CROSSAPP_Storage__DataPath
+
+$env:CROSSAPP_DATA_PATH = "demo-data"
+dotnet run --project src/Cli -- export
+dotnet run --project src/Cli -- import-json
+Remove-Item Env:CROSSAPP_DATA_PATH
+
+dotnet run --project src/Cli -- config --Library:LoanDays=21 --Storage:DataPath=demo-data
+```
+
+## Приклади для bash
+
+```bash
+CROSSAPP_ENVIRONMENT=Production dotnet run --project src/Cli -- config
+CROSSAPP_Storage__DataPath=demo-data dotnet run --project src/Cli -- config
+CROSSAPP_DATA_PATH=demo-data dotnet run --project src/Cli -- export
+dotnet run --project src/Cli -- config --Library:LoanDays=21
+```
+
+## User-secrets
+
+У Cli.csproj є UserSecretsId. Навчальний ключ можна задати або замінити командою нижче.
+
+```powershell
+dotnet user-secrets set "Integration:ApiKey" "local-dev-key" --project src/Cli
+dotnet user-secrets list --project src/Cli
+dotnet run --project src/Cli -- config
+
+$env:CROSSAPP_Integration__ApiKey = "from-env"
+dotnet run --project src/Cli -- config
+Remove-Item Env:CROSSAPP_Integration__ApiKey
+```
+
+Застосунок друкує лише факт наявності й довжину. На Windows secrets.json лежить у %APPDATA%/Microsoft/UserSecrets/<UserSecretsId>/secrets.json, у Linux і macOS — ~/.microsoft/usersecrets/<UserSecretsId>/secrets.json. У репозиторії зберігається ідентифікатор. Значення лишається в профілі ОС. У Production user-secrets не підключаються.
+
+## Формат та збереження JSON
+
+Кожне видання має isbn, title, author, year та масив copies. Примірники зберігають власні ID і isIssued, тому експорт та повторний імпорт відновлюють стан видачі. Старі плоскі JSON-файли лабораторних №5–8 також читаються. Рік 0 означає, що старий запис не містив року.
+
+LibraryJson використовує camelCase, форматування та читабельну кирилицю. Запис створює окремий файл із суфіксом .tmp у тому самому каталозі, завершує запис і виконує File.Move з overwrite. При помилці тимчасовий файл прибирається. FileBookStore оновлює кеш після успішного запису.
+
+Runtime-каталоги data та локальні secrets.json ігноруються Git. Існуючі файли прикладів у кореневій data залишаються відстежуваними з попередніх робіт. Під час збірки потрібні приклади копіюються в samples поруч із застосунком.
+
+## Перевірки
+
+40 тестових сценаріїв охоплюють попередню логіку, збереження й відновлення метаданих, старий формат, шляхи, атомарний запис і налаштований строк видачі. Тести створюють власні тимчасові каталоги та прибирають їх після виконання.
+
+Перевірка однакового шляху з двох каталогів у PowerShell.
+
+```powershell
+dotnet run --project src/Cli -- config
+Push-Location src/Cli
+dotnet run -- config
+Pop-Location
+```
+
 ## Лабораторна робота №8
 
 Робочий каталог цієї версії — `CrossApp`. Команди нижче виконуйте з нього.

@@ -10,6 +10,25 @@ using Notifications;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+CliConfiguration configuration;
+try
+{
+    configuration = CliConfiguration.Load(args);
+    configuration.Print();
+    args = configuration.CommandArguments;
+}
+catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException or
+    InvalidOperationException or FormatException or UnauthorizedAccessException)
+{
+    Console.WriteLine($"Помилка конфігурації: {ex.Message}");
+    return 1;
+}
+
+if (args.FirstOrDefault() is "config" or "export" or "import-json")
+{
+    return LibraryCommands.Run(args[0], args, configuration);
+}
+
 // ==========================================
 // 1. ОСНОВНИЙ ВЕРХНЬОРІВНЕВИЙ КОД (ЕКЗЕКУЦІЯ)
 // ==========================================
@@ -19,19 +38,19 @@ string? customFilePath = args.FirstOrDefault(a => !a.StartsWith("--"));
 
 if (customFilePath is "import" or "import-stream")
 {
-    return await ImportCommands.RunAsync(args);
+    return await ImportCommands.RunAsync(args, configuration.Options);
 }
 
 if (customFilePath is not null &&
     customFilePath.StartsWith("report-", StringComparison.Ordinal) &&
     !Path.HasExtension(customFilePath))
 {
-    return ReportCommands.Run(customFilePath, args);
+    return ReportCommands.Run(customFilePath, args, configuration.Options);
 }
 
 string path = !string.IsNullOrEmpty(customFilePath)
     ? customFilePath
-    : Path.Combine("data", "sample.csv");
+    : Path.Combine(AppContext.BaseDirectory, "samples", "sample.csv");
 
 if (!File.Exists(path))
 {
@@ -84,7 +103,7 @@ Console.WriteLine($"Усього: {total} | Прийнято: {accepted} | Пр�
 Console.WriteLine();
 Console.WriteLine("Різнорідні записи");
 
-string mixedPath = Path.Combine("data", "library-mixed.csv");
+string mixedPath = Path.Combine(AppContext.BaseDirectory, "samples", "library-mixed.csv");
 
 if (!File.Exists(mixedPath))
 {
@@ -178,7 +197,7 @@ static void DemonstrateDomainImport()
     Console.WriteLine();
     Console.WriteLine("=== Дод. завдання 1: Імпорт у доменну модель ===");
 
-    string path = Path.Combine("data", "library-mixed.csv");
+    string path = Path.Combine(AppContext.BaseDirectory, "samples", "library-mixed.csv");
 
     if (!File.Exists(path))
     {
@@ -452,7 +471,7 @@ static void DemonstrateLab6()
     Console.WriteLine();
 Console.WriteLine("=== Додаткове завдання: Action ===");
 
-string csvPath = Path.Combine("data", "sample.csv");
+string csvPath = Path.Combine(AppContext.BaseDirectory, "samples", "sample.csv");
 
 if (File.Exists(csvPath))
 {

@@ -1,57 +1,46 @@
-using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
-using Core.Dto;
 
 namespace Core.Storage;
 
 public sealed class FileBookStore(string path) : IBookStore
 {
-    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
-    private readonly Dictionary<string, BookCopy> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, BookCopy> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _path = Path.GetFullPath(path);
     private bool _loaded;
 
     private void EnsureLoaded()
     {
         if (_loaded) return;
-
+        var loaded = new Dictionary<string, BookCopy>(StringComparer.OrdinalIgnoreCase);
         if (File.Exists(_path))
         {
-            var json = File.ReadAllText(_path);
-            var dtos = JsonSerializer.Deserialize<List<LibraryRecordDto>>(json) ?? [];
-
-            foreach (var dto in dtos)
+            foreach (var book in LibraryJson.Read(_path))
             {
-                var copy = BookCopy.Create(dto.Id, dto.Isbn, dto.Title);
-                if (dto.IsIssued)
-                {
-                    copy.Issue();
-                }
-                _cache[copy.Id] = copy;
+                if (!loaded.TryAdd(book.Id, book))
+                    throw new DomainException($"Повторюваний ID примірника: {book.Id}");
             }
         }
-
+        _cache = loaded;
         _loaded = true;
     }
 
-    private void Flush()
+    private void Commit(Dictionary<string, BookCopy> next)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var dtos = _cache.Values.Select(b => new LibraryRecordDto(b.Id, b.Isbn, b.Title, b.IsIssued)).ToList();
-        File.WriteAllText(_path, JsonSerializer.Serialize(dtos, Options));
+        var saved = LibraryJson.WriteAtomic(_path, next.Values);
+        _cache = saved.ToDictionary(book => book.Id, StringComparer.OrdinalIgnoreCase);
     }
 
     public IReadOnlyList<BookCopy> List()
     {
         EnsureLoaded();
-        return _cache.Values.ToList();
+        return _cache.Values.Select(book => BookCopy.FromDto(book.ToDto())).ToList();
     }
 
     public BookCopy? GetById(string id)
     {
         EnsureLoaded();
-        return _cache.GetValueOrDefault(id);
+        return _cache.TryGetValue(id, out var book) ? BookCopy.FromDto(book.ToDto()) : null;
     }
 
     public IReadOnlyList<BookCopy> Find(Func<BookCopy, bool> predicate) =>
@@ -61,27 +50,29 @@ public sealed class FileBookStore(string path) : IBookStore
     {
         ArgumentNullException.ThrowIfNull(item);
         EnsureLoaded();
-        if (_cache.ContainsKey(item.Id))
+        var next = new Dictionary<string, BookCopy>(_cache, StringComparer.OrdinalIgnoreCase);
+        if (!next.TryAdd(item.Id, BookCopy.FromDto(item.ToDto())))
             throw new DomainException($"Запис з id={item.Id} вже існує.");
-
-        _cache.Add(item.Id, item);
-        Flush();
+        Commit(next);
     }
 
     public void Update(BookCopy item)
     {
         ArgumentNullException.ThrowIfNull(item);
         EnsureLoaded();
-        _cache[item.Id] = item;
-        Flush();
+        var next = new Dictionary<string, BookCopy>(_cache, StringComparer.OrdinalIgnoreCase)
+        {
+            [item.Id] = BookCopy.FromDto(item.ToDto())
+        };
+        Commit(next);
     }
 
     public bool Remove(string id)
     {
         EnsureLoaded();
-        if (!_cache.Remove(id)) return false;
-
-        Flush();
+        var next = new Dictionary<string, BookCopy>(_cache, StringComparer.OrdinalIgnoreCase);
+        if (!next.Remove(id)) return false;
+        Commit(next);
         return true;
     }
 }

@@ -1,4 +1,5 @@
 using Core;
+using Core.Configuration;
 using Core.Domain;
 using Core.Reports;
 using Core.Services;
@@ -6,7 +7,7 @@ using Core.Storage;
 
 internal static class ReportCommands
 {
-    internal static int Run(string command, string[] args)
+    internal static int Run(string command, string[] args, AppOptions options)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
         if (command == "report-benchmark")
@@ -20,7 +21,7 @@ internal static class ReportCommands
         }
 
         bool useFile = args.Contains("--file");
-        var service = new LendingService(StoreFactory.Create(args));
+        var service = new LendingService(StoreFactory.Create(args, options.Storage), loanDays: options.Library.LoanDays);
         IReadOnlyList<ScheduledLoan> loans = useFile ? [] : SampleData.Loans(today);
 
         switch (command)

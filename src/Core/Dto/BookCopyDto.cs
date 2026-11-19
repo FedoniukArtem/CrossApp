@@ -4,4 +4,6 @@ public record BookCopyDto(
     string Id,
     string Isbn,
     string Title,
-    bool IsIssued);
+    bool IsIssued,
+    string? Author = null,
+    int Year = 0);

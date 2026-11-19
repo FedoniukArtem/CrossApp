@@ -7,14 +7,14 @@ public static class SampleData
 {
     private static readonly (BookDto Edition, int Copies)[] Catalog =
     [
-        (new("ED-01", "978-617-000-0001", "Кобзар", 2020), 3),
-        (new("ED-02", "978-617-000-0002", "Тіні забутих предків", 2018), 2),
-        (new("ED-03", "978-617-000-0003", "Місто", 2021), 4),
-        (new("ED-04", "978-617-000-0004", "Захар Беркут", 2020), 1),
-        (new("ED-05", "978-617-000-0005", "Кайдашева сім'я", 2018), 3),
-        (new("ED-06", "978-617-000-0006", "Лісова пісня", 2021), 2),
-        (new("ED-07", "978-617-000-0007", "Тигролови", 2023), 2),
-        (new("ED-08", "978-617-000-0008", "Intermezzo", 2023), 1)
+        (new("ED-01", "978-617-000-0001", "Кобзар", 2020, "Тарас Шевченко"), 3),
+        (new("ED-02", "978-617-000-0002", "Тіні забутих предків", 2018, "Михайло Коцюбинський"), 2),
+        (new("ED-03", "978-617-000-0003", "Місто", 2021, "Валер'ян Підмогильний"), 4),
+        (new("ED-04", "978-617-000-0004", "Захар Беркут", 2020, "Іван Франко"), 1),
+        (new("ED-05", "978-617-000-0005", "Кайдашева сім'я", 2018, "Іван Нечуй-Левицький"), 3),
+        (new("ED-06", "978-617-000-0006", "Лісова пісня", 2021, "Леся Українка"), 2),
+        (new("ED-07", "978-617-000-0007", "Тигролови", 2023, "Іван Багряний"), 2),
+        (new("ED-08", "978-617-000-0008", "Intermezzo", 2023, "Михайло Коцюбинський"), 1)
     ];
 
     public static IReadOnlyList<BookDto> Editions() =>
@@ -26,14 +26,14 @@ public static class SampleData
 
         foreach (var (edition, _) in Catalog)
         {
-            books.Add(BookCopy.Create($"COPY-{books.Count + 1:000}", edition.Isbn, edition.Title));
+            books.Add(BookCopy.Create($"COPY-{books.Count + 1:000}", edition.Isbn, edition.Title, edition.Author, edition.Year));
         }
 
         foreach (var (edition, copies) in Catalog)
         {
             for (int i = 1; i < copies; i++)
             {
-                books.Add(BookCopy.Create($"COPY-{books.Count + 1:000}", edition.Isbn, edition.Title));
+                books.Add(BookCopy.Create($"COPY-{books.Count + 1:000}", edition.Isbn, edition.Title, edition.Author, edition.Year));
             }
         }
 

@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Runtime data and local secrets
+/data/
+**/secrets.json
+*.tmp

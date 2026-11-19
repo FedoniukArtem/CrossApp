@@ -1,15 +1,16 @@
 using System.Text.Json;
 using Core;
 using Core.Abstractions;
+using Core.Configuration;
 using Core.Import;
 using Core.Services;
 using Core.Storage;
 
 internal static class ImportCommands
 {
-    internal static async Task<int> RunAsync(string[] args)
+    internal static async Task<int> RunAsync(string[] args, AppOptions options)
     {
-        string path = Path.Combine("data", "library-import.json");
+        string path = Path.Combine(AppContext.BaseDirectory, "samples", "library-import.json");
         int timeoutMs = Timeout.Infinite;
         bool stream = args.Contains("import-stream");
         bool hasPath = false;
@@ -59,9 +60,9 @@ internal static class ImportCommands
 
         Console.CancelKeyPress += OnCancel;
         IBookStore store = args.Contains("--file")
-            ? StoreFactory.Create(args)
+            ? StoreFactory.Create(args, options.Storage)
             : new InMemoryBookStore();
-        var service = new LendingService(store);
+        var service = new LendingService(store, loanDays: options.Library.LoanDays);
         var importer = new JsonBookImporter();
         var progress = new ConsoleImportProgress();
         int addedThisRun = 0;

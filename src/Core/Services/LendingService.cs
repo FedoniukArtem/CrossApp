@@ -8,13 +8,17 @@ public sealed class LendingService
 {
     private readonly IBookStore _store;
     private readonly IReadOnlyList<INotificationSink> _sinks;
+    private readonly int _loanDays;
 
     public LendingService(
         IBookStore store,
-        IEnumerable<INotificationSink>? sinks = null)
+        IEnumerable<INotificationSink>? sinks = null,
+        int loanDays = 14)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _sinks = (sinks ?? []).ToList();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(loanDays);
+        _loanDays = loanDays;
     }
 
     public event EventHandler<CatalogChangedEventArgs>? Changed;
@@ -76,7 +80,7 @@ public sealed class LendingService
         IssueBook(
             id,
             "Не вказано",
-            DateOnly.FromDateTime(DateTime.Today.AddDays(14)));
+            DateOnly.FromDateTime(DateTime.Today.AddDays(_loanDays)));
     }
 
     public void ReturnBook(string id, string readerId)

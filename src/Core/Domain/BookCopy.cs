@@ -9,6 +9,8 @@ public sealed class BookCopy
     public string Isbn { get; }
 
     public string Title { get; }
+    public string? Author { get; }
+    public int Year { get; }
 
     public bool IsIssued { get; private set; }
 
@@ -16,18 +18,20 @@ public sealed class BookCopy
         string id,
         string isbn,
         string title,
-        bool isIssued)
+        bool isIssued, string? author, int year)
     {
         Id = id;
         Isbn = isbn;
         Title = title;
         IsIssued = isIssued;
+        Author = author;
+        Year = year;
     }
 
     public static BookCopy Create(
         string id,
         string isbn,
-        string title)
+        string title, string? author = null, int year = 0)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -50,11 +54,14 @@ public sealed class BookCopy
                 nameof(title));
         }
 
+        if (year < 0 || year > 9999)
+            throw new ArgumentOutOfRangeException(nameof(year), "Некоректний рік видання.");
+
         return new BookCopy(
             id.Trim(),
             isbn.Trim(),
             title.Trim(),
-            false);
+            false, author?.Trim(), year);
     }
 
     public void Issue()
@@ -85,7 +92,7 @@ public sealed class BookCopy
             Id,
             Isbn,
             Title,
-            IsIssued);
+            IsIssued, Author, Year);
     }
 
     public static BookCopy FromDto(BookCopyDto dto)
@@ -95,7 +102,7 @@ public sealed class BookCopy
         BookCopy copy = Create(
             dto.Id,
             dto.Isbn,
-            dto.Title);
+            dto.Title, dto.Author, dto.Year);
 
         if (dto.IsIssued)
         {

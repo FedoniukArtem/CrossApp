@@ -2,17 +2,12 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
-using Core.Dto;
+using Core.Storage;
 
 namespace Core.Import;
 
 public sealed class JsonBookImporter : IBookImporter
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     public async Task<IReadOnlyList<BookCopy>> LoadAsync(string path, CancellationToken ct = default)
     {
         var books = new List<BookCopy>();
@@ -49,22 +44,16 @@ public sealed class JsonBookImporter : IBookImporter
         int index = 0;
         int lastPercent = 0;
 
-        await foreach (var dto in JsonSerializer.DeserializeAsyncEnumerable<BookCopyDto>(
-            stream, Options, ct))
+        await foreach (var record in JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(
+            stream, LibraryJson.Options, ct))
         {
             ct.ThrowIfCancellationRequested();
             index++;
-            BookCopy book;
-            try
+            foreach (var book in LibraryJson.ReadRecord(record, index))
             {
-                book = BookCopy.FromDto(dto!);
+                ct.ThrowIfCancellationRequested();
+                yield return book;
             }
-            catch (ArgumentException ex)
-            {
-                throw new DomainException($"Запис {index}: {ex.Message}", ex);
-            }
-
-            yield return book;
 
             ct.ThrowIfCancellationRequested();
             // Позиція враховує буфер читання. 100% повідомляємо лише після завершення імпорту.
